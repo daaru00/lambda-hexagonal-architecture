@@ -1,0 +1,201 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 
+  - AWS::LanguageExtensions
+  - AWS::Serverless-2016-10-31
+
+Description: Application description
+
+Globals:
+  Function:
+    Runtime: nodejs18.x
+    Timeout: 6
+    CodeUri: src/ # NOTE: all functions share the sme code, they will be updated at every deployment
+
+Resources:
+
+  ##
+  # Database
+  ##
+
+  UsersTable:
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      TableName: !Sub "${AWS::StackName}-users"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+
+  ProductTable:
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      TableName: !Sub "${AWS::StackName}-products"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: name
+          AttributeType: S
+      KeySchema:
+        - AttributeName: name
+          KeyType: HASH
+
+  ##
+  # API
+  ##
+
+  RestApi:
+    Type: AWS::Serverless::Api # NOTE: the API cannot be nested or imported, RestApiId !Ref will fail
+    Properties:
+      Name: !Ref AWS::StackName
+      StageName: api
+      Auth:
+        ApiKeyRequired: false # NOTE: setup authentication
+  
+  GetCurrentUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-get-current-user"
+      Handler: adapters/primary/api/getCurrentUser.handler
+      # NOTE: required policy not set
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApi
+            Method: GET
+            Path: /me
+
+  SetUserInfoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-set-user-info"
+      Handler: adapters/primary/api/setUserInfo.handler
+      # NOTE: required policy not set
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApi
+            Method: POST
+            Path: /me
+
+  ListProductsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-list-products"
+      Handler: adapters/primary/api/listProducts.handler
+      # NOTE: required policy not set
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApi
+            Method: GET
+            Path: /products
+
+  GetCartFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-get-cart"
+      Handler: adapters/primary/api/getCart.handler
+      # NOTE: required policy not set
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApi
+            Method: GET
+            Path: /cart
+            
+  AddToCartFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-add-to-cart"
+      Handler: adapters/primary/api/addToCart.handler
+      # NOTE: required policy not set
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApi
+            Method: POST
+            Path: /cart/add
+
+  RemoveToCartFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-remove-from-cart"
+      Handler: adapters/primary/api/removeFromCart.handler
+      # NOTE: required policy not set
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApi
+            Method: POST
+            Path: /cart/remove
+
+  ##
+  # Events
+  ##
+
+  EventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: !Ref AWS::StackName
+
+  OnUserRegisteredFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-on-user-registered"
+      Handler: adapters/primary/events/onUserRegistered.handler
+      Events:
+        ReceivedEvents:
+          Type: EventBridgeRule
+          Properties:
+            EventBusName: !Ref EventBus
+            Pattern:
+              detail-type:
+                - 'User Registered'
+
+  OnProductUpdatedFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-on-product-updated"
+      Handler: adapters/primary/events/onProductUpdated.handler
+      Events:
+        ReceivedEvents:
+          Type: EventBridgeRule
+          Properties:
+            EventBusName: !Ref EventBus
+            Pattern:
+              detail-type:
+                - 'Product Updated'
+
+  ##
+  # Queue
+  ##
+
+  EmailQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${AWS::StackName}-email"
+
+  SendEmailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-send-email"
+      Handler: adapters/primary/queue/sendEmail.handler
+      Events:
+        QueueConsumer:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt EmailQueue.Arn
+            BatchSize: 5
+
+Outputs:
+  EndpointURL:
+    Description: "Endpoint URL"
+    Value: !Sub "https://${RestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/api/"
