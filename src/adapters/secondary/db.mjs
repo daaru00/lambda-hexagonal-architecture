@@ -2,8 +2,8 @@ async function getUserInfo(userId) {
 	console.log('Retrieving user from DB', { userId })
 	return {
 		id: userId,
-		name: 'Mario',
-		surname: 'Rossi',
+		name: 'John',
+		surname: 'Doe',
 	}
 }
 
@@ -32,6 +32,11 @@ async function listProducts() {
 
 async function getCart(userId) {
 	console.log('Retrieving user cart', { userId })
+	return {
+		products: [],
+		total: 0,
+		userId: userId,
+	}
 }
 
 async function saveCart(userId, cart) {

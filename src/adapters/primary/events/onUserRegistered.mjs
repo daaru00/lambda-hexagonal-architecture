@@ -4,5 +4,5 @@ import events from '../../../utils/events.mjs'
 export async function handler(event) {
 	const user = events.getEventDetail(event)
 	
-	await onUserRegistered(user.id)
+	await onUserRegistered({ userId: user.id })
 }

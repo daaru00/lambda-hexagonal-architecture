@@ -7,7 +7,7 @@ export async function handler(event) {
 		return api.respondClientFail('Invalid Auth')
 	}
   
-	const cart = await getCart(auth.userId)
+	const cart = await getCart({ userId: auth.userId })
   
 	return api.respondSuccess(cart)
 }

@@ -7,7 +7,7 @@ export async function handler(event) {
 	const promises = []
 	for (const record of records) {
 		promises.push(
-			await sendEmailToUser(record.user, record.template)
+			await sendEmailToUser({ user: record.user, template: record.template })
 		)
 	}
 

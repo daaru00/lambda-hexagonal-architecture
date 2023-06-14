@@ -32,7 +32,7 @@ async function main(file) {
 
 	// NOTE: do not perform validation here, will be triggered by port
 
-	const promises = products.map(product => importProduct(product))
+	const promises = products.map(product => importProduct({ product }))
 
 	await Promise.all(promises)
 }

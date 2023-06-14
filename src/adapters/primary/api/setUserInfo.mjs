@@ -12,7 +12,7 @@ export async function handler(event) {
 	// NOTE: do not perform validation here, will be triggered by port
 
 	try {
-		await setUserInfo(auth.userId, info)	
+		await setUserInfo({ userId: auth.userId, info })	
 	} catch (error) {
 		return api.respondClientFail(error.message)
 	}

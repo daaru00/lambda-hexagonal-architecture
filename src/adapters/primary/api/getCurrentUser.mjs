@@ -7,7 +7,7 @@ export async function handler(event) {
 		return api.respondClientFail('Invalid Auth')
 	}
 
-	const user = await getUserInfo(auth.userId)
+	const user = await getUserInfo({ userId: auth.userId })
 
 	return api.respondSuccess(user)
 }

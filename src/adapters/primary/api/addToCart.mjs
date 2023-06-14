@@ -12,7 +12,7 @@ export async function handler(event) {
 	// NOTE: do not perform validation here, will be triggered by port
 
 	try {
-		await addToCart(auth.userId, product)	
+		await addToCart({ userId: auth.userId, product })	
 	} catch (error) {
 		return api.respondClientFail(error.message)
 	}
